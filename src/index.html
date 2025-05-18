@@ -1,0 +1,334 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WheyghtPrice - Calculadora de Custo-Benefício de Proteínas</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#5cb85c', // Verde primário
+                        danger: '#d9534f',  // Vermelho para perigo/exclusão
+                        // Cores para o tema escuro
+                        'dark-bg-start': '#1D2B64', // Um azul escuro profundo
+                        'dark-bg-end': '#000000',   // Preto
+                        'dark-card': '#2C3E50',    // Um cinza azulado escuro para cards
+                        'dark-text-primary': '#EAEAEA', // Cinza claro para texto principal
+                        'dark-text-secondary': '#B0B0B0',// Cinza um pouco mais escuro para texto secundário
+                        'dark-accent': '#3498DB', // Um azul mais vivo para acentos
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        .modal-hidden { display: none; opacity: 0; transition: opacity 0.3s ease-out, display 0.3s ease-out allow-discrete; }
+        .modal-visible { display: flex; opacity: 1; transition: opacity 0.3s ease-out, display 0.3s ease-out allow-discrete; }
+        @starting-style { .modal-visible { opacity: 0; } }
+        body { display: flex; flex-direction: column; min-height: 100vh; }
+        main { flex-grow: 1; }
+        /* Estilos para scrollbar no tema escuro (opcional, mas melhora a estética) */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #2C3E50; /* Cor do card escuro */
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #4A5A6A; /* Um pouco mais claro que a track */
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #5A6A7A; /* Mais claro no hover */
+        }
+    </style>
+</head>
+<body class="bg-gradient-to-br from-dark-bg-start to-dark-bg-end text-dark-text-primary antialiased">
+
+    <header class="bg-dark-card shadow-lg">
+        <div class="container mx-auto max-w-5xl px-4 sm:px-6 lg:px-8">
+            <div class="flex items-center justify-between h-16">
+                <div class="flex items-center">
+                    <a href="#" id="brand-link" class="text-2xl font-bold text-green-600 hover:text-green-700">
+                        WheyghtPrice
+                    </a>
+                </div>
+                <div class="flex items-center">
+                    <button id="how-to-use-button" title="Como usar a calculadora" class="text-gray-500 hover:text-green-600 focus:outline-none">
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-7 h-7">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M9.879 7.519c1.171-1.025 3.071-1.025 4.242 0 1.172 1.025 1.172 2.687 0 3.712-.203.179-.43.326-.67.442-.745.361-1.45.999-1.45 1.827v.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9 5.25h.008v.008H12v-.008Z" />
+                        </svg>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <main class="py-8 sm:py-10">
+        <div class="container mx-auto max-w-4xl px-4 sm:px-6 lg:px-8 bg-dark-card p-6 sm:p-8 rounded-lg shadow-2xl">
+            <h1 class="text-4xl sm:text-3xl block text-center font-medium text-dark-text-secondary mb-1">
+                Calculadora de Preço por Grama de Proteína
+            </h1>
+
+             <div class="mb-8 p-4 border border-gray-700 bg-gray-800 rounded-md">
+                <h2 class="text-lg font-semibold text-dark-text-primary mb-3">Preencher por Código de Barras</h2>
+                <div class="flex flex-col sm:flex-row items-end gap-3">
+                    <div class="flex-grow">
+                        <label for="barcode-input" class="block text-sm font-medium text-dark-text-secondary mb-1">Código de Barras (EAN):</label>
+                        <input type="text" id="barcode-input" placeholder="Digite ou escaneie o código de barras" class="mt-1 block w-full px-3 py-2 bg-gray-700 border border-gray-600 text-dark-text-primary rounded-md shadow-sm focus:outline-none focus:ring-dark-accent focus:border-dark-accent sm:text-sm">
+                    </div>
+                    <button type="button" id="fetch-barcode-data" class="w-full sm:w-auto px-4 py-2 bg-dark-accent text-white text-sm font-medium rounded-md hover:bg-blue-500 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-dark-card focus:ring-dark-accent">
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5 inline-block mr-1 align-text-bottom">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" />
+                        </svg>
+                        Buscar Produto
+                    </button>
+                </div>
+                <p id="barcode-status" class="text-xs text-dark-text-secondary mt-2"></p>
+            </div>
+
+
+            <form id="protein-form" class="space-y-6 mb-10">
+                <div>
+                    <label for="popular-products" class="block text-sm font-medium text-dark-text-secondary mb-1">Selecionar Produto Popular (Opcional):</label>
+                    <select id="popular-products" class="mt-1 block w-full px-3 py-2 bg-gray-700 border border-gray-600 text-dark-text-primary rounded-md shadow-sm focus:outline-none focus:ring-dark-accent focus:border-dark-accent sm:text-sm">
+                        <option value="">-- Escolha um produto --</option>
+                        <option value="frango">Peito de Frango (cru)</option>
+                        <option value="ovo">Ovo de Galinha (unidade)</option>
+                        <option value="whey_growth">Whey Protein Concentrado (Growth 1kg)</option>
+                        <option value="albumina">Albumina (500g)</option>
+                        <option value="leite_integral">Leite Integral (1L)</option>
+                        <option value="atum_agua">Atum em Conserva (água, 120g peso drenado)</option>
+                        <option value="lentilha">Lentilha (crua)</option>
+                    </select>
+                </div>
+
+                <div>
+                    <label for="product-name" class="block text-sm font-medium text-dark-text-secondary mb-1">Nome do Produto:</label>
+                    <input type="text" id="product-name" placeholder="Ex: Whey" required class="mt-1 block w-full px-3 py-2 bg-gray-700 border border-gray-600 text-dark-text-primary rounded-md shadow-sm focus:outline-none focus:ring-dark-accent focus:border-dark-accent sm:text-sm">
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                        <label for="product-price" class="block text-sm font-medium text-dark-text-secondary mb-1">Preço Total do Produto (R$):</label>
+                        <input type="number" id="product-price" placeholder="Ex: 120,00" step="0.01" min="0.01" required class="mt-1 block w-full px-3 py-2 bg-gray-700 border border-gray-600 text-dark-text-primary rounded-md shadow-sm focus:outline-none focus:ring-dark-accent focus:border-dark-accent sm:text-sm">
+                    </div>
+                    <div>
+                        <label for="total-weight" class="block text-sm font-medium text-dark-text-secondary mb-1">Peso Total do Produto (g/ml):</label>
+                        <input type="number" id="total-weight" min="1" placeholder="Ex: 1000" required class="mt-1 block w-full px-3 py-2 bg-gray-700 border border-gray-600 text-dark-text-primary rounded-md shadow-sm focus:outline-none focus:ring-dark-accent focus:border-dark-accent sm:text-sm">
+                    </div>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                        <label for="serving-size" class="block text-sm font-medium text-dark-text-secondary mb-1">Tamanho da Porção (g/ml):</label>
+                        <input type="number" id="serving-size" min="1"  placeholder="Ex: 30" required class="mt-1 block w-full px-3 py-2 bg-gray-700 border border-gray-600 text-dark-text-primary rounded-md shadow-sm focus:outline-none focus:ring-dark-accent focus:border-dark-accent sm:text-sm">
+                    </div>
+                    <div>
+                        <label for="protein-per-serving" class="block text-sm font-medium text-dark-text-secondary mb-1">Proteína por Porção (g):</label>
+                        <input type="number" id="protein-per-serving" min="0"  placeholder="Ex: 24" required class="mt-1 block w-full px-3 py-2 bg-gray-700 border border-gray-600 text-dark-text-primary rounded-md shadow-sm focus:outline-none focus:ring-dark-accent focus:border-dark-accent sm:text-sm">
+                    </div>
+                </div>
+                <button type="submit" class="w-1/2 ml-auto mr-auto flex justify-center py-2.5 px-4 border border-transparent rounded-md shadow-sm text-base font-medium text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500">
+                    Adicionar Produto e Calcular
+                </button>
+            </form>
+
+            <div class="mb-8 p-4 border border-gray-700 bg-gray-800 rounded-md">
+                <div class="flex flex-col sm:flex-row justify-between items-start">
+                    <div class="flex-grow mb-2 sm:mb-0 sm:mr-4">
+                        <label for="daily-protein-goal" class="block text-sm font-medium text-dark-text-secondary mb-1">Sua Meta Diária de Proteína (g) - <span class="text-xs text-gray-500">Opcional</span>:</label>
+                        <input type="number" id="daily-protein-goal" min="0" placeholder="Ex: 120" class="mt-1 block w-full md:w-1/2 px-3 py-2 bg-gray-700 border border-gray-600 text-dark-text-primary rounded-md shadow-sm focus:outline-none focus:ring-dark-accent focus:border-dark-accent sm:text-sm">
+                        <p class="text-xs text-gray-500 mt-1">Informe sua meta para calcular o custo e unidades mensais.</p>
+                    </div>
+                    <button type="button" id="calculate-daily-protein-button" class="w-full sm:w-auto mt-2 sm:mt-0 px-4 py-2 bg-dark-accent text-white text-sm font-medium rounded-md hover:bg-blue-500 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-800 focus:ring-dark-accent self-start sm:self-center whitespace-nowrap">
+                        Descobrir Minha Proteína Diária
+                    </button>
+                </div>
+            </div>
+
+
+            <div class="flex flex-col sm:flex-row justify-between items-center mb-6">
+                <h2 class="text-xl sm:text-2xl font-semibold text-dark-text-primary text-center sm:text-left mb-4 sm:mb-0">Comparativo de Produtos</h2>
+                <div class="flex space-x-2">
+                    <button id="copy-table-button" title="Copiar tabela como texto" class="px-4 py-2 bg-gray-600 text-white text-sm font-medium rounded-md hover:bg-gray-500 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-dark-card focus:ring-gray-500 flex items-center">
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5 mr-2">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 17.25v3.375c0 .621-.504 1.125-1.125 1.125h-9.75a1.125 1.125 0 01-1.125-1.125V7.875c0-.621.504-1.125 1.125-1.125H6.75a9.06 9.06 0 011.5.124m7.5 10.376h3.375c.621 0 1.125-.504 1.125-1.125V11.25c0-4.46-3.243-8.161-7.5-8.876a9.06 9.06 0 00-1.5-.124H9.375c-.621 0-1.125.504-1.125 1.125V7.5m0 4.5M12 12.75h.008v.008H12v-.008z" />
+                        </svg>
+                        Copiar Tabela
+                    </button>
+                    <button id="export-csv-button" class="px-4 py-2 bg-dark-accent text-white text-sm font-medium rounded-md hover:bg-blue-500 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-dark-card focus:ring-dark-accent flex items-center">
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5 mr-2">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M9 8.25H7.5a2.25 2.25 0 0 0-2.25 2.25v9a2.25 2.25 0 0 0 2.25 2.25h9a2.25 2.25 0 0 0 2.25-2.25v-9a2.25 2.25 0 0 0-2.25-2.25H15M9 12l3 3m0 0 3-3m-3 3V2.25" />
+                        </svg>
+                        Exportar CSV
+                    </button>
+                </div>
+            </div>
+
+            <div class="overflow-x-auto shadow-lg rounded-lg border border-gray-700">
+                <table id="results-table" class="min-w-full divide-y divide-gray-700">
+                    <thead class="bg-gray-800">
+                        <tr>
+                            <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-dark-text-secondary uppercase tracking-wider">Produto</th>
+                            <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-dark-text-secondary uppercase tracking-wider">Preço Total</th>
+                            <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-dark-text-secondary uppercase tracking-wider">Peso Total</th>
+                            <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-dark-text-secondary uppercase tracking-wider">Proteína Total</th>
+                            <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-dark-text-secondary uppercase tracking-wider">Preço/g Proteína</th>
+                            <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-dark-text-secondary uppercase tracking-wider">Unidades/Mês (Meta)</th>
+                            <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-dark-text-secondary uppercase tracking-wider">Custo Mensal (Meta R$)</th>
+                            <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-dark-text-secondary uppercase tracking-wider">Ações</th>
+                        </tr>
+                        </tr>
+                    </thead>
+                    <tbody id="results-body" class="bg-white divide-y divide-gray-700">
+                        </tbody>
+                </table>
+            </div>
+            <p id="no-results" class="text-center text-gray-500 mt-6 hidden">Nenhum produto adicionado ainda.</p>
+        </div>
+    </main>
+
+    <div id="how-to-use-modal" class="modal-hidden fixed inset-0 bg-black bg-opacity-75 items-center justify-center p-4 z-50 overflow-y-auto">
+        <div class="bg-dark-card rounded-lg shadow-xl p-6 sm:p-8 max-w-lg w-full my-8 text-dark-text-primary">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-xl font-semibold text-dark-text-primary">Como Usar a Calculadora WheyghtPrice</h3>
+                <button id="close-modal-button" class="text-dark-text-secondary hover:text-primary">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-6 h-6">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                </button>
+            </div>
+            <div class="text-sm text-dark-text-secondary space-y-3">
+                 <p>Esta calculadora ajuda você a encontrar o melhor custo-benefício de proteína em diferentes produtos e a estimar seus gastos mensais com base na sua meta.</p>
+                <ol class="list-decimal list-inside space-y-2 pl-2">
+                    <li><strong>Selecionar Produto Popular (Opcional):</strong> Escolha um produto da lista para pré-preencher alguns campos. Lembre-se de ajustar o preço.</li>
+                    <li><strong>Nome do Produto:</strong> Digite o nome ou marca do produto.</li>
+                    <li><strong>Preço Total do Produto (R$):</strong> Insira o valor da embalagem.</li>
+                    <li><strong>Peso Total do Produto (g/ml):</strong> Indique o peso líquido total da embalagem em gramas (para sólidos) ou mililitros (para líquidos).</li>
+                    <li><strong>Tamanho da Porção (g/ml):</strong> Encontre na tabela nutricional do produto. Veja o exemplo abaixo de como localizar essas informações.</li>
+                    <li><strong>Proteína por Porção (g):</strong> Também na tabela nutricional, informe a proteína na porção.</li>
+                </ol>
+
+                <div class="my-4 p-2 border border-dashed border-gray-300 rounded-md text-center">
+                    <img src="https://via.placeholder.com/450x250.png?text=Exemplo+de+Tabela+Nutricional" alt="Exemplo de Tabela Nutricional" class="mx-auto my-2 rounded shadow-sm" style="max-width: 100%; height: auto;">
+                    <p class="text-xs text-gray-500 italic">Imagem ilustrativa. Em breve, um guia detalhado sobre como ler tabelas nutricionais.</p>
+                </div>
+
+                <p>Após preencher, clique em "Adicionar Produto e Calcular".</p>
+                <p><strong>Descobrir Minha Proteína Diária:</strong> Clique neste botão para abrir uma calculadora que estima sua necessidade diária de proteína com base no seu peso, altura, idade, gênero e nível de atividade. Você pode aplicar o resultado diretamente à sua meta.</p>
+                <p><strong>Meta Diária de Proteína (Opcional):</strong> Se desejar, informe sua meta diária de proteína em gramas. Isso habilitará o cálculo de quantas unidades do produto você precisaria por mês e o custo mensal estimado para atingir essa meta com cada produto listado.</p>
+                <p>A tabela é ordenada pelo menor preço por grama de proteína. Use o botão "Exportar para CSV" para baixar os dados.</p>
+            </div>
+            <div class="mt-6 text-right">
+                <button id="got-it-button" class="px-4 py-2 bg-green-600 text-white text-sm font-medium rounded-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500">
+                    Entendi!
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div id="daily-protein-modal" class="modal-hidden fixed inset-0 bg-gray-600 bg-opacity-50 items-center justify-center p-4 z-50 overflow-y-auto">
+        <div class="bg-white rounded-lg shadow-xl p-6 sm:p-8 max-w-xl w-full my-8"> <div class="flex justify-between items-center mb-6">
+                <h3 class="text-xl font-semibold text-gray-700">Calcular Proteína Diária Estimada</h3>
+                <button id="close-daily-protein-modal-button" class="text-gray-400 hover:text-gray-600">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-6 h-6">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                </button>
+            </div>
+            <div class="text-sm text-gray-600 space-y-4">
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                        <label for="user-weight-dp" class="block text-sm font-medium text-gray-700 mb-1">Seu Peso (kg):</label>
+                        <input type="number" id="user-weight-dp" min="1" class="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm" placeholder="Ex: 70">
+                    </div>
+                    <div>
+                        <label for="user-height-dp" class="block text-sm font-medium text-gray-700 mb-1">Sua Altura (cm):</label>
+                        <input type="number" id="user-height-dp" min="1" class="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm" placeholder="Ex: 175">
+                    </div>
+                </div>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                        <label for="user-age-dp" class="block text-sm font-medium text-gray-700 mb-1">Sua Idade (anos):</label>
+                        <input type="number" id="user-age-dp" min="10" max="100" class="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm" placeholder="Ex: 30">
+                    </div>
+                    <div>
+                        <label for="user-gender-dp" class="block text-sm font-medium text-gray-700 mb-1">Gênero:</label>
+                        <select id="user-gender-dp" class="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm">
+                            <option value="male">Masculino</option>
+                            <option value="female">Feminino</option>
+                        </select>
+                    </div>
+                </div>
+                <div>
+                    <label for="activity-level-dp" class="block text-sm font-medium text-gray-700 mb-1">Nível de Atividade Física:</label>
+                    <select id="activity-level-dp" class="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm">
+                        <option value="sedentary">Sedentário (pouco ou nenhum exercício)</option>
+                        <option value="light">Levemente Ativo (exercício leve 1-3 dias/semana)</option>
+                        <option value="moderate" selected>Moderadamente Ativo (exercício moderado 3-5 dias/semana)</option>
+                        <option value="active">Muito Ativo (exercício pesado 6-7 dias/semana)</option>
+                        <option value="extra_active">Extremamente Ativo (exercício muito pesado/trabalho físico)</option>
+                    </select>
+                </div>
+                <button id="calculate-needs-button" class="w-full mt-6 px-4 py-2 bg-primary text-white text-base font-medium rounded-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500">
+                    Calcular Necessidade
+                </button>
+                <div id="protein-recommendation" class="mt-6 p-4 bg-blue-50 border border-blue-200 rounded-md text-center hidden">
+                    <p class="text-gray-700 text-sm">Com base nos seus dados:</p>
+                    <p class="text-gray-700 mt-1">Seu Gasto Energético Diário Estimado (TDEE) é de <strong id="tdee-amount" class="text-blue-600">---</strong> kcal.</p>
+                    <p class="text-gray-700 mt-2">Sua necessidade diária estimada de proteína é de:</p>
+                    <p class="text-xl font-bold text-blue-700"><span id="recommended-protein-amount">--</span> gramas.</p>
+                    <p class="text-xs text-gray-500 mt-2">Estes são valores estimados. Para recomendações personalizadas, consulte um nutricionista.</p>
+                </div>
+            </div>
+            <div class="mt-8 text-right space-x-3">
+                <button id="apply-to-goal-button" class="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50" disabled>
+                    Aplicar à Meta
+                </button>
+                <button id="close-daily-protein-modal-button-alt" class="px-4 py-2 bg-gray-200 text-gray-700 text-sm font-medium rounded-md hover:bg-gray-300 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-400">
+                    Fechar
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <footer class="bg-gray-800 text-white py-8 mt-12">
+        <div class="container mx-auto max-w-4xl px-4 sm:px-6 lg:px-8 text-center">
+            <h3 class="text-lg font-semibold mb-3">Compartilhe esta ferramenta:</h3>
+            <div class="flex justify-center space-x-3 sm:space-x-4 mb-6">
+                <button id="share-whatsapp" title="Compartilhar no WhatsApp" class="p-2 bg-green-500 hover:bg-green-600 rounded-full text-white transition-colors">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 sm:h-6 sm:w-6" fill="currentColor" viewBox="0 0 24 24">
+                        <path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946.003-6.556 5.338-11.891 11.893-11.891 3.181.001 6.167 1.24 8.413 3.488 2.245 2.248 3.481 5.236 3.48 8.414-.003 6.557-5.338 11.892-11.893 11.892-1.99-.001-3.951-.5-5.688-1.448l-6.305 1.654zm6.597-3.807c1.676.995 3.276 1.591 5.392 1.592 5.448 0 9.886-4.434 9.889-9.885.002-5.462-4.415-9.89-9.881-9.892-5.452 0-9.887 4.434-9.889 9.884-.001 2.225.651 3.891 1.746 5.634l-.999 3.648 3.742-.981zm11.387-5.464c-.074-.124-.272-.198-.57-.347-.297-.149-1.758-.868-2.031-.967-.272-.099-.47-.149-.669.149-.198.297-.768.967-.941 1.165-.173.198-.347.223-.644.074-.297-.149-1.255-.462-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.297-.347.446-.521.151-.172.2-.296.3-.495.099-.198.05-.372-.025-.521-.075-.148-.669-1.611-.916-2.206-.242-.579-.487-.501-.669-.51l-.57-.01c-.198 0-.52.074-.792.372s-1.04 1.016-1.04 2.479 1.065 2.876 1.213 3.074c.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.626.712.226 1.36.194 1.872.118.571-.085 1.758-.719 2.006-1.413.248-.695.248-1.29.173-1.414z"/>
+                    </svg>
+                </button>
+                <button id="share-twitter" title="Compartilhar no X (Twitter)" class="p-2 bg-black hover:bg-gray-700 rounded-full text-white transition-colors">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 sm:h-6 sm:w-6" fill="currentColor" viewBox="0 0 24 24">
+                        <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/>
+                    </svg>
+                </button>
+                <button id="share-facebook" title="Compartilhar no Facebook" class="p-2 bg-blue-600 hover:bg-blue-700 rounded-full text-white transition-colors">
+                     <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 sm:h-6 sm:w-6" fill="currentColor" viewBox="0 0 24 24">
+                        <path d="M9 8h-3v4h3v12h5v-12h3.642l.358-4h-4v-1.667c0-.955.192-1.333 1.115-1.333h2.885v-5h-3.808c-3.596 0-5.192 1.583-5.192 4.615v3.385z"/>
+                    </svg>
+                </button>
+                <button id="share-linkedin" title="Compartilhar no LinkedIn" class="p-2 bg-blue-700 hover:bg-blue-800 rounded-full text-white transition-colors">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 sm:h-6 sm:w-6" fill="currentColor" viewBox="0 0 24 24">
+                        <path d="M4.98 3.5c0 1.381-1.11 2.5-2.48 2.5s-2.48-1.119-2.48-2.5c0-1.38 1.11-2.5 2.48-2.5s2.48 1.12 2.48 2.5zm.02 4.5h-5v16h5v-16zm7.982 0h-4.968v16h4.969v-8.399c0-4.67 6.029-5.052 6.029 0v8.399h4.988v-10.131c0-7.88-8.922-7.594-11.018-3.714v-2.155z"/>
+                    </svg>
+                </button>
+                <button id="share-email" title="Compartilhar por Email" class="p-2 bg-gray-500 hover:bg-gray-600 rounded-full text-white transition-colors">
+                     <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 sm:h-6 sm:w-6" fill="currentColor" viewBox="0 0 24 24">
+                        <path d="M0 3v18h24v-18h-24zm21.518 2l-9.518 7.713-9.518-7.713h19.036zm-19.518 14v-11.817l10 8.104 10-8.104v11.817h-20z"/>
+                    </svg>
+                </button>
+            </div>
+            <p class="text-xs text-gray-400">&copy; <span id="current-year"></span> WheyghtPrice.</p>
+        </div>
+    </footer>
+
+    <script src="script.js"></script>
+</body>
+</html>
